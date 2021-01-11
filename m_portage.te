@@ -1,0 +1,39 @@
+policy_module(m_portage, 0.1)
+
+#[ 2764.803387] audit: type=1400 audit(1610437142.826:787): avc:  denied  { getattr } for  pid=14488 comm=\"gcc-config\" path=\"/dev/ptmx\" dev=\"devtmpfs\" ino=93 scontext=root:sysadm_r:gcc_config_t tcontext=system_u:object_r:ptmx_t tclass=chr_file permissive=1
+#[ 2768.597928] audit: type=1400 audit(1610437146.621:788): avc:  denied  { read write } for  pid=14600 comm=\"gcc-config\" path=\"/dev/pts/0\" dev=\"devpts\" ino=3 scontext=root:sysadm_r:gcc_config_t tcontext=root:object_r:portage_devpts_t tclass=chr_file permissive=1
+#[ 2773.150708] audit: type=1400 audit(1610437151.174:789): avc:  denied  { ioctl } for  pid=14647 comm=\"gcc-config\" path=\"/dev/pts/0\" dev=\"devpts\" ino=3 ioctlcmd=0x540f scontext=root:sysadm_r:gcc_config_t tcontext=root:object_r:portage_devpts_t tclass=chr_file permissive=1
+optional_policy(`
+	gen_require(`
+		type gcc_config_t;
+	')
+	term_getattr_ptmx(gcc_config_t)
+#[  209.877693] audit: type=1400 audit(1610401796.882:626): avc:  denied  { getsched } for  pid=1449 comm=\"sort\" scontext=root:sysadm_r:gcc_config_t tcontext=root:sysadm_r:gcc_config_t tclass=process permissive=1
+	allow gcc_config_t self:process getsched;
+')
+
+optional_policy(`
+	gen_require(`
+		type portage_t;
+	')
+	corenet_udp_bind_generic_node(portage_t)
+	corenet_tcp_bind_generic_node(portage_t)
+')
+
+#[  358.502390] audit: type=1400 audit(1610428329.943:130): avc:  denied  { execute } for  pid=2959 comm=\"emerge\" name=\"exectest-kusoeql5\" dev=\"tmpfs\" ino=314 scontext=root:sysadm_r:portage_t tcontext=root:object_r:portage_tmpfs_t tclass=file permissive=1
+optional_policy(`
+	gen_require(`
+		type portage_t;
+		type portage_tmpfs_t;
+	')
+	can_exec(portage_t, portage_tmpfs_t)
+')
+
+#[  161.032580] audit: type=1400 audit(1610428132.473:84): avc:  denied  { write } for  pid=2067 comm=\"load_policy\" path=\"pipe:[13553]\" dev=\"pipefs\" ino=13553 scontext=root:sysadm_r:load_policy_t tcontext=root:sysadm_r:portage_t tclass=fifo_file permissive=1
+optional_policy(`
+	gen_require(`
+		type portage_t;
+		type load_policy_t;
+	')
+	allow load_policy_t portage_t:fifo_file write;
+')
