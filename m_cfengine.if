@@ -1,0 +1,161 @@
+## <summary></summary>
+
+########################################
+## <summary>
+##      Set a domain to be managed by cfengine
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_manage',`
+        gen_require(`
+                type cfengine_agent_t;
+        ')
+
+	allow $1 cfengine_agent_t:fd use;
+	allow $1 cfengine_execd_t:fd use;
+	allow $1 cfengine_agent_t:fifo_file { append ioctl read write };
+	allow $1 cfengine_execd_t:fifo_file { append ioctl read write };
+')
+
+########################################
+## <summary>
+##      Read cfengine policy
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_read_policy',`
+        gen_require(`
+                type cfengine_var_lib_t;
+        ')
+
+	files_list_var($1)
+	read_files_pattern($1, cfengine_var_lib_t, cfengine_var_lib_t)
+')
+
+########################################
+## <summary>
+##      Read cfengine logs
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_read_logs',`
+        gen_require(`
+                type cfengine_log_t;
+        ')
+
+	files_list_var($1)
+	read_files_pattern($1, cfengine_log_t, cfengine_log_t)
+	read_lnk_files_pattern($1, cfengine_log_t, cfengine_log_t)
+')
+
+########################################
+## <summary>
+##      Write cfengine logs
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_write_logs',`
+        gen_require(`
+                type cfengine_log_t;
+        ')
+
+	files_list_var($1)
+	write_files_pattern($1, cfengine_log_t, cfengine_log_t)
+	create_files_pattern($1, cfengine_log_t, cfengine_log_t)
+	#read_lnk_files_pattern($1, cfengine_log_t, cfengine_log_t)
+')
+
+########################################
+## <summary>
+##      Manage cfengine logs
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_manage_logs',`
+        gen_require(`
+                type cfengine_log_t;
+        ')
+
+	files_list_var($1)
+	manage_files_pattern($1, cfengine_log_t, cfengine_log_t)
+	manage_lnk_files_pattern($1, cfengine_log_t, cfengine_log_t)
+')
+
+########################################
+## <summary>
+##      Manage cfengine cache
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_manage_cache',`
+        gen_require(`
+                type cfengine_cache_t;
+        ')
+
+	files_list_var($1)
+	manage_files_pattern($1, cfengine_cache_t, cfengine_cache_t)
+#	manage_lnk_files_pattern($1, cfengine_cache_t, cfengine_log_t)
+')
+
+########################################
+## <summary>
+##      Manage cfengine cache
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_write_cache',`
+        gen_require(`
+                type cfengine_cache_t;
+        ')
+
+	files_list_var($1)
+	allow $1 cfengine_cache_t:file { append getattr ioctl write };
+')
+
+########################################
+## <summary>
+##      Execute cfengine modules
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mcfengine_exec_modules',`
+        gen_require(`
+                type cfengine_var_lib_t;
+        ')
+
+	files_list_var($1)
+	can_exec($1, cfengine_var_lib_t)
+')
+

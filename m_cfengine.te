@@ -1,0 +1,1010 @@
+policy_module(m_cfengine, 0.2)
+
+gen_require(`
+	type semanage_t;
+	type ifconfig_t;
+	type memory_device_t;
+	type tun_tap_device_t;
+	type auditd_t;
+	type udev_t;
+	type system_cron_spool_t;
+	type user_home_t;
+	type cfengine_execd_t;
+	role system_r;
+')
+
+type cfengine_port_t;
+corenet_port(cfengine_port_t)
+
+type cfengine_cache_t;
+files_type(cfengine_cache_t)
+
+type cfengine_tmp_t;
+files_tmp_file(cfengine_tmp_t)
+
+#type cfengine_log_t;
+#logging_log_file(cfengine_log_t)
+
+type cf_module_t;
+type cf_module_exec_t;
+domain_type(cf_module_t)
+domain_entry_file(cf_module_t, cf_module_exec_t)
+role system_r types cf_module_t;
+
+manage_files_pattern(cfengine_agent_t, cfengine_tmp_t, cfengine_tmp_t)
+manage_dirs_pattern(cfengine_agent_t, cfengine_tmp_t, cfengine_tmp_t)
+files_tmp_filetrans(cfengine_agent_t, cfengine_tmp_t, file)
+
+manage_files_pattern(cfengine_agent_t, cfengine_log_t, cfengine_log_t)
+manage_dirs_pattern(cfengine_agent_t, cfengine_log_t, cfengine_log_t)
+
+allow cfengine_agent_t self:capability { dac_read_search dac_override fowner fsetid sys_admin sys_ptrace sys_rawio };
+allow cfengine_agent_t self:process { getsched sigstop };
+#chpasswd
+allow cfengine_agent_t self:netlink_selinux_socket { create bind };
+#/chpasswd
+allow cfengine_agent_t security_t:security compute_av;
+
+#supprime lien cert dans etc
+allow cfengine_agent_t etc_t:lnk_file unlink;
+allow cfengine_agent_t etc_t:file { setattr };
+allow cfengine_agent_t etc_t:file { relabelfrom relabelto };
+
+allow cfengine_agent_t etc_t:dir { create setattr };
+
+#allow semanage_t cfengine_cache_t:file { write getattr ioctl };
+mcfengine_write_cache(semanage_t)
+mcfengine_manage(semanage_t)
+
+
+allow cfengine_agent_t cfengine_port_t:tcp_socket name_connect;
+
+cfengine_domain_template(agent)
+
+optional_policy(`
+	gen_require(`
+		type unconfined_t;
+		role unconfined_r;
+		role system_r;
+		type load_policy_t;
+	')
+
+	cfengine_admin(unconfined_t, unconfined_r)
+	domain_auto_transition_pattern(unconfined_t, cfengine_agent_exec_t, cfengine_agent_t)
+	domain_system_change_exemption(unconfined_t)
+	role_transition unconfined_r cfengine_agent_exec_t system_r;
+	role system_r types cfengine_agent_t;
+	unconfined_rw_pipes(cfengine_agent_t)
+	unconfined_use_fds(cfengine_agent_t)
+	unconfined_sigchld(cfengine_agent_t)
+	unconfined_rw_pipes(load_policy_t)
+	allow cfengine_agent_t unconfined_t:netlink_selinux_socket getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type sysadm_t;
+		role sysadm_r;
+		role system_r;
+	')
+	cfengine_admin(sysadm_t, sysadm_r)
+	domain_auto_transition_pattern(sysadm_t, cfengine_agent_exec_t, cfengine_agent_t)
+	domain_system_change_exemption(sysadm_t)
+	role_transition sysadm_r cfengine_agent_exec_t system_r;
+	role system_r types cfengine_agent_t;
+	sysadm_rw_pipes(cfengine_agent_t)
+	sysadm_use_fds(cfengine_agent_t)
+	sysadm_sigchld(cfengine_agent_t)
+')
+
+domain_getattr_all_pipes(cfengine_agent_t)
+domain_getattr_all_stream_sockets(cfengine_agent_t)
+
+optional_policy(`
+	gen_require(`
+		attribute domain;
+	')
+	allow cfengine_agent_t domain:sock_file getattr;
+	allow cfengine_agent_t domain:tcp_socket getattr;
+	allow cfengine_agent_t domain:udp_socket getattr;
+	allow cfengine_agent_t domain:unix_dgram_socket getattr;
+	allow cfengine_agent_t domain:netlink_route_socket getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type cfengine_var_lib_t;
+	')
+	can_exec(cfengine_agent_t, cfengine_var_lib_t)
+	allow cfengine_agent_t cfengine_var_lib_t:file relabelfrom;
+')
+
+mcfengine_manage_cache(cfengine_agent_t)
+
+
+allow cfengine_agent_t memory_device_t:chr_file getattr;
+allow cfengine_agent_t tun_tap_device_t:chr_file getattr;
+allow cfengine_agent_t udev_t:netlink_kobject_uevent_socket getattr;
+allow cfengine_agent_t auditd_t:netlink_audit_socket getattr;
+udev_manage_rules_files(cfengine_agent_t)
+optional_policy(`
+	gen_require(`
+		type udev_rules_t;
+	')
+	allow cfengine_agent_t udev_rules_t:file { relabelfrom relabelto };
+')
+
+dev_getattr_sysfs(cfengine_agent_t)
+dev_search_sysfs(cfengine_agent_t)
+dev_list_sysfs(cfengine_agent_t)
+dev_read_sysfs(cfengine_agent_t)
+dev_read_realtime_clock(cfengine_agent_t)
+dev_read_kmsg(cfengine_agent_t)
+
+domain_read_all_domains_state(cfengine_agent_t)
+domain_obj_id_change_exemption(cfengine_agent_t)
+
+files_getattr_all_dirs(cfengine_agent_t)
+files_getattr_all_files(cfengine_agent_t)
+files_getattr_all_symlinks(cfengine_agent_t)
+files_getattr_all_pipes(cfengine_agent_t)
+files_getattr_all_sockets(cfengine_agent_t)
+mfiles_getattr_all_chr(cfengine_agent_t)
+files_read_all_files(cfengine_agent_t)
+files_read_non_security_files(cfengine_agent_t)
+
+files_list_mnt(cfengine_agent_t)
+files_list_usr(cfengine_agent_t)
+files_list_var(cfengine_agent_t)
+files_search_mnt(cfengine_agent_t)
+# to be re enabled  # mfiles_search_var_db(cfengine_agent_t)
+files_manage_etc_files(cfengine_agent_t)
+files_manage_etc_runtime_files(cfengine_agent_t)
+files_manage_usr_files(cfengine_agent_t)
+files_manage_kernel_modules(cfengine_agent_t)
+allow cfengine_agent_t modules_object_t:dir setattr;
+allow cfengine_agent_t modules_object_t:lnk_file setattr;
+
+fs_getattr_xattr_fs(cfengine_agent_t)
+
+kernel_read_kernel_sysctls(cfengine_agent_t)
+kernel_search_network_sysctl(cfengine_agent_t)
+kernel_read_network_state(cfengine_agent_t)
+kernel_getattr_message_if(cfengine_agent_t)
+
+#init_exec_rc(cfengine_agent_t)
+#init_exec_script_files(cfengine_agent_t)
+#init_spec_domtrans_script(cfengine_agent_t)
+init_domtrans_script(cfengine_agent_t)
+init_getattr_initctl(cfengine_agent_t)
+
+libs_manage_lib_dirs(cfengine_agent_t)
+allow cfengine_agent_t lib_t:file { create write unlink setattr relabelfrom };
+allow cfengine_agent_t bin_t:file relabelto;
+allow cfengine_agent_t bin_t:dir setattr;
+
+#pour restarter
+logging_append_all_logs(cfengine_agent_t)
+
+mount_exec(cfengine_agent_t)
+
+selinux_getattr_fs(cfengine_agent_t)
+selinux_get_enforce_mode(cfengine_agent_t)
+selinux_set_enforce_mode(cfengine_agent_t)
+selinux_load_policy(cfengine_agent_t)
+selinux_set_generic_booleans(cfengine_agent_t)
+selinux_set_all_booleans(cfengine_agent_t)
+seutil_domtrans_semanage(cfengine_agent_t)
+
+storage_getattr_fixed_disk_dev(cfengine_agent_t)
+storage_raw_read_fixed_disk(cfengine_agent_t)
+
+sysnet_dns_name_resolve(cfengine_agent_t)
+sysnet_manage_config(cfengine_agent_t)
+sysnet_manage_config(cf_module_t)
+
+term_getattr_ptmx(cfengine_agent_t)
+term_getattr_unallocated_ttys(cfengine_agent_t)
+term_getattr_unallocated_ttys(cfengine_execd_t)
+
+userdom_use_user_ptys(cfengine_agent_t)
+
+allow cfengine_agent_t usr_t:dir { create setattr };
+# local portage
+allow cfengine_agent_t usr_t:lnk_file setattr;
+
+#gpg template
+allow cfengine_agent_t usr_t:file {relabelfrom relabelto};
+
+auth_domtrans_chk_passwd(cfengine_agent_t)
+# removed due to bug failed to resolve dontaudit
+####usermanage_domtrans_useradd(cfengine_agent_t)
+####usermanage_domtrans_groupadd(cfengine_agent_t)
+
+#creation /home/xxx
+optional_policy(`
+        gen_require(`
+		type home_root_t;
+		type ssh_home_t;
+		type user_home_dir_t;
+#		class passwd { passwd rootok chfn chsh };
+	')
+	#allow cfengine_agent_t home_root_t:dir { add_name write create };
+	#allow cfengine_agent_t user_home_dir_t:dir create;
+	userdom_create_user_home_dirs(cfengine_agent_t)
+	userdom_home_filetrans_user_home_dir(cfengine_agent_t)
+	userdom_manage_user_home_content_dirs(cfengine_agent_t)
+	filetrans_pattern(cfengine_agent_t, user_home_dir_t, ssh_home_t, dir, ".ssh")
+	ssh_manage_home_files(cfengine_agent_t)
+	allow cfengine_agent_t ssh_home_t:dir { create setattr };
+	allow cfengine_agent_t user_home_dir_t:dir setattr;
+	allow cfengine_agent_t ssh_home_t:file { relabelfrom relabelto };
+#	allow cfengine_agent_t self:passwd { passwd rootok chfn chsh };
+#	auth_rw_shadow(cfengine_agent_t)
+#	allow chkpwd_t fs_t:filesystem getattr;
+#	allow chkpwd_t security_t:filesystem getattr;
+#	allow chkpwd_t security_t:dir getattr;
+
+')
+#/creation /home/xxx
+allow cfengine_agent_t user_home_t:file { setattr write };
+
+#allow cfengine_agent_t system_cron_spool_t:dir { write add_name };
+allow cfengine_agent_t system_cron_spool_t:file { relabelfrom relabelto };
+manage_files_pattern(cfengine_agent_t, system_cron_spool_t, system_cron_spool_t)
+
+
+fstools_exec(cfengine_agent_t)
+
+gpg_exec(cfengine_agent_t)
+hostname_exec(cfengine_agent_t)
+
+#logging_admin_syslog(cfengine_agent_t, system_r)
+logging_send_syslog_msg(cfengine_agent_t)
+
+miscfiles_manage_generic_cert_dirs(cfengine_agent_t)
+miscfiles_manage_generic_cert_files(cfengine_agent_t)
+
+portage_read_db(cfengine_agent_t)
+
+smartmon_admin(cfengine_agent_t, system_r)
+
+#allow cfengine_agent_t bin_t:file write;
+#allow cfengine_agent_t bin_t:file write;
+corecmd_manage_bin_files(cfengine_agent_t)
+
+# needed by detect_network
+optional_policy(`
+	gen_require(`
+		type ifconfig_t;
+	')
+	allow ifconfig_t cfengine_tmp_t:file { getattr write };
+')
+optional_policy(`
+	gen_require(`
+		type ifconfig_t;
+		type user_tmpfs_t;
+	')
+	allow ifconfig_t user_tmpfs_t:file { getattr write };
+')
+
+# cfreport
+optional_policy(`
+	gen_require(`
+		type hostname_t;
+		type user_tmpfs_t;
+	')
+	allow hostname_t user_tmpfs_t:file { getattr write };
+')
+
+
+allow cfengine_agent_t bin_t:lnk_file create;
+
+#cfagent peux se relancer
+optional_policy(`
+	gen_require(`
+		type cfengine_initrc_exec_t;
+	')
+	init_labeled_script_domtrans(cfengine_agent_t, cfengine_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, cfengine_initrc_exec_t)
+')
+
+#cfagent peux se relancer (bootstrap)
+allow cfengine_agent_t cfengine_agent_exec_t:file execute_no_trans;
+
+optional_policy(`
+	gen_require(`
+		type auditd_initrc_exec_t;
+	')
+	logging_manage_audit_config(cfengine_agent_t)
+	allow cfengine_agent_t auditd_etc_t:file { relabelfrom relabelto };
+	#allow cfengine_agent_t auditd_initrc_exec_t:file execute;
+	init_labeled_script_domtrans(cfengine_agent_t, auditd_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, auditd_initrc_exec_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type mcelog_initrc_exec_t;
+		type mcelog_t;
+		type mcelog_etc_t;
+		type mcelog_log_t;
+	')
+	init_labeled_script_domtrans(cfengine_agent_t, mcelog_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, mcelog_initrc_exec_t)
+	mcfengine_manage(mcelog_t)
+	allow cfengine_agent_t mcelog_etc_t:file { setattr };
+	allow cfengine_agent_t mcelog_log_t:file setattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type syslogd_initrc_exec_t;
+		type syslogd_t;
+	')
+	init_labeled_script_domtrans(cfengine_agent_t, syslogd_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, syslogd_initrc_exec_t)
+	mcfengine_manage(syslogd_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type openvpn_initrc_exec_t;
+		type openvpn_t;
+		type openvpn_etc_t;
+	')
+	init_labeled_script_domtrans(cfengine_agent_t, openvpn_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, openvpn_initrc_exec_t)
+	mcfengine_manage(openvpn_t)
+#	allow cfengine_agent_t openvpn_etc_t:dir write;
+#	allow cfengine_agent_t openvpn_etc_t:file setattr;
+	manage_files_pattern(cfengine_agent_t, openvpn_etc_t, openvpn_etc_t)
+	manage_dirs_pattern(cfengine_agent_t, openvpn_etc_t, openvpn_etc_t)
+	allow cfengine_agent_t openvpn_etc_t:file { relabelfrom relabelto };
+')
+
+optional_policy(`
+	openvpn_read_config(cfengine_agent_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type sshd_t;
+	')
+	allow cfengine_agent_t sshd_t:fd use;
+	allow cf_module_t sshd_t:fd use;
+')
+
+optional_policy(`
+	gen_require(`
+		type mcelog_initrc_exec_t;
+	')
+	allow cfengine_agent_t mcelog_initrc_exec_t:file execute;
+')
+
+#optional_policy(`
+#	gen_require(`
+#		type syslogd_initrc_exec_t;
+#	')
+#	allow cfengine_agent_t syslogd_initrc_exec_t:file execute;
+#')
+
+optional_policy(`
+	xymon_manage_etc(cfengine_agent_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type xymon_check_exec_t;
+	')
+	manage_files_pattern(cfengine_agent_t, xymon_check_exec_t, xymon_check_exec_t)
+	manage_dirs_pattern(cfengine_agent_t, xymon_check_exec_t, xymon_check_exec_t)
+	allow cfengine_agent_t xymon_check_exec_t:dir write;
+	allow cfengine_agent_t xymon_check_exec_t:file { rename unlink };
+')
+
+optional_policy(`
+	gen_require(`
+		type portage_conf_t;
+		type portage_cache_t;
+		type portage_db_t;
+		type portage_ebuild_t;
+		type portage_gpg_t;
+	')
+	manage_files_pattern(cfengine_agent_t, portage_conf_t, portage_conf_t)
+	relabel_files_pattern(cfengine_agent_t, portage_conf_t, portage_conf_t)
+	relabel_dirs_pattern(cfengine_agent_t, portage_conf_t, portage_conf_t)
+	manage_files_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+	relabel_files_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+	relabel_dirs_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+	allow cfengine_agent_t portage_db_t:dir setattr;
+	allow cfengine_agent_t portage_db_t:file setattr;
+	allow cfengine_agent_t portage_cache_t:dir setattr;
+	allow cfengine_agent_t portage_cache_t:file setattr;
+	allow cfengine_agent_t portage_ebuild_t:dir setattr;
+	allow cfengine_agent_t portage_ebuild_t:file setattr;
+	#allow cfengine_agent_t portage_gpg_t:file setattr;
+	manage_files_pattern(cfengine_agent_t, portage_gpg_t, portage_gpg_t)
+	allow cfengine_agent_t portage_conf_t:dir setattr;
+	allow cfengine_agent_t portage_conf_t:lnk_file setattr;
+')
+#optional_policy(`
+#	gen_require(`
+#		type portage_devpts_t;
+#		type portage_tmp_t;
+#	')
+#	allow cfengine_agent_t portage_devpts_t:chr_file getattr;
+#	allow cfengine_agent_t portage_tmp_t:fifo_file getattr;
+#')
+
+optional_policy(`
+	gen_require(`
+		type portage_srcrepo_t;
+	')
+	allow cfengine_agent_t portage_srcrepo_t:dir setattr;
+	allow cfengine_agent_t portage_srcrepo_t:file setattr;
+')
+
+
+optional_policy(`
+	gen_require(`
+		type postfix_etc_t;
+		type postfix_initrc_exec_t;
+		type postfix_master_t;
+	')
+	allow cfengine_agent_t postfix_etc_t:file { setattr relabelfrom relabelto };
+	manage_files_pattern(cfengine_agent_t, postfix_etc_t, postfix_etc_t)
+	init_labeled_script_domtrans(cfengine_agent_t, postfix_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, postfix_initrc_exec_t)
+	mcfengine_manage(postfix_master_t)
+	# certif
+	manage_files_pattern(cf_module_t, postfix_etc_t, postfix_etc_t)
+	manage_dirs_pattern(cf_module_t, postfix_etc_t, postfix_etc_t)
+	manage_lnk_files_pattern(cf_module_t, postfix_etc_t, postfix_etc_t)
+	allow cfengine_agent_t postfix_etc_t:dir setattr;
+	allow cfengine_agent_t postfix_etc_t:lnk_file create;
+	allow cfengine_agent_t postfix_etc_t:lnk_file unlink;
+')
+
+optional_policy(`
+	gen_require(`
+		type dkim_milter_t;
+		type dkim_milter_initrc_exec_t;
+	')
+	init_labeled_script_domtrans(cfengine_agent_t, dkim_milter_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, dkim_milter_initrc_exec_t)
+	mcfengine_manage(dkim_milter_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type ntpd_t;
+		type ntpd_initrc_exec_t;
+	')
+	#init_labeled_script_domtrans(cfengine_agent_t, ntpd_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, ntpd_initrc_exec_t)
+	mcfengine_manage(ntpd_t)
+')
+
+optional_policy(`
+	ntp_admin(cfengine_agent_t, system_r)
+')
+
+optional_policy(`
+	gen_require(`
+		type dovecot_etc_t;
+		type dovecot_var_run_t;
+		type dovecot_cert_t;
+	')
+	manage_files_pattern(cfengine_agent_t, dovecot_etc_t, dovecot_etc_t)
+	manage_files_pattern(cfengine_agent_t, dovecot_cert_t, dovecot_cert_t)
+	allow cfengine_agent_t dovecot_etc_t:dir setattr;
+	allow cfengine_agent_t dovecot_etc_t:file { relabelfrom relabelto };
+	allow cfengine_agent_t dovecot_var_run_t:fifo_file getattr;
+	# certif
+	manage_files_pattern(cf_module_t, dovecot_cert_t, dovecot_cert_t)
+	manage_dirs_pattern(cf_module_t, dovecot_cert_t, dovecot_cert_t)
+	manage_lnk_files_pattern(cf_module_t, dovecot_cert_t, dovecot_cert_t)
+	allow cfengine_agent_t dovecot_cert_t:dir setattr;
+	allow cfengine_agent_t dovecot_cert_t:lnk_file create;
+	allow cfengine_agent_t dovecot_cert_t:lnk_file unlink;
+')
+
+optional_policy(`
+	gen_require(`
+		type httpd_config_t;
+		type httpd_log_t;
+		type httpd_t;
+	')
+	manage_files_pattern(cfengine_agent_t, httpd_config_t, httpd_config_t)
+	allow cfengine_agent_t httpd_config_t:file setattr;
+	allow cfengine_agent_t httpd_config_t:file { relabelfrom relabelto };
+	allow cfengine_agent_t httpd_log_t:dir setattr;
+	mcfengine_manage(httpd_t)
+	manage_files_pattern(cf_module_t, httpd_config_t, httpd_config_t)
+	manage_dirs_pattern(cf_module_t, httpd_config_t, httpd_config_t)
+	manage_lnk_files_pattern(cf_module_t, httpd_config_t, httpd_config_t)
+	allow cfengine_agent_t httpd_config_t:lnk_file { create unlink };
+	allow cfengine_agent_t httpd_config_t:dir { create setattr };
+')
+
+optional_policy(`
+	gen_require(`
+		type awstats_var_lib_t;
+	')
+	allow cfengine_agent_t awstats_var_lib_t:dir { write setattr };
+')
+
+optional_policy(`
+	gen_require(`
+		type batch_exec_t;
+		type batch_tmp_t;
+	')
+	allow cfengine_agent_t batch_exec_t:file { rename unlink };
+	manage_dirs_pattern(cfengine_agent_t, batch_tmp_t, batch_tmp_t)
+	seutil_exec_setfiles(cfengine_agent_t)
+	allow cfengine_agent_t batch_tmp_t:file relabelto;
+')
+
+optional_policy(`
+	gen_require(`
+		type sshd_t;
+		type ssh_keygen_t;
+	')
+	mcfengine_manage(sshd_t)
+	mcfengine_manage(ssh_keygen_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type ftpd_t;
+		type ftpd_initrc_exec_t;
+	')
+	allow cfengine_agent_t ftpd_initrc_exec_t:file execute;
+	init_labeled_script_domtrans(cfengine_agent_t, ftpd_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, ftpd_initrc_exec_t)
+	mcfengine_manage(ftpd_t)
+')
+
+optional_policy(`
+        gen_require(`
+                type dovecot_t;
+                type dovecot_initrc_exec_t;
+        ')
+        init_labeled_script_domtrans(cfengine_agent_t, dovecot_initrc_exec_t)
+        init_labeled_script_domtrans(cf_module_t, dovecot_initrc_exec_t)
+        mcfengine_manage(dovecot_t)
+')
+
+optional_policy(`
+        gen_require(`
+                type ulogd_t;
+                type ulogd_initrc_exec_t;
+		type ulogd_etc_t;
+        ')
+#        init_labeled_script_domtrans(cfengine_agent_t, ulogd_initrc_exec_t)
+        init_labeled_script_domtrans(cf_module_t, ulogd_initrc_exec_t)
+        mcfengine_manage(ulogd_t)
+	manage_files_pattern(cfengine_agent_t, ulogd_etc_t, ulogd_etc_t)
+	allow cfengine_agent_t ulogd_etc_t:file relabelto;
+	allow cfengine_agent_t ulogd_etc_t:file { unlink write };
+')
+
+optional_policy(`
+        gen_require(`
+                type fsdaemon_t;
+                type fsdaemon_initrc_exec_t;
+        ')
+#	init_labeled_script_domtrans(cfengine_agent_t, fsdaemon_initrc_exec_t)
+        init_labeled_script_domtrans(cf_module_t, fsdaemon_initrc_exec_t)
+        mcfengine_manage(fsdaemon_t)
+')
+
+optional_policy(`
+        gen_require(`
+		type named_t;
+                type named_initrc_exec_t;
+        ')
+        init_labeled_script_domtrans(cfengine_agent_t, named_initrc_exec_t)
+        init_labeled_script_domtrans(cf_module_t, named_initrc_exec_t)
+        mcfengine_manage(named_t)
+')
+
+#Lors du restart named
+optional_policy(`
+	gen_require(`
+		type tmpfiles_t;
+		type named_var_run_t;
+	')
+	mcfengine_manage(tmpfiles_t)
+	allow tmpfiles_t named_var_run_t:dir relabelfrom;
+')
+
+optional_policy(`
+	gen_require(`
+		type munin_t;
+		type munin_etc_t;
+		type munin_initrc_exec_t;
+	')
+	manage_files_pattern(cfengine_agent_t, munin_etc_t, munin_etc_t)
+	manage_dirs_pattern(cfengine_agent_t, munin_etc_t, munin_etc_t)
+	manage_lnk_files_pattern(cfengine_agent_t, munin_etc_t, munin_etc_t)
+	init_labeled_script_domtrans(cfengine_agent_t, munin_initrc_exec_t)
+	init_labeled_script_domtrans(cf_module_t, munin_initrc_exec_t)
+	mcfengine_manage(munin_t)
+')
+
+
+
+allow cfengine_execd_t cfengine_agent_t:fifo_file { getattr write ioctl };
+allow cfengine_execd_t cfengine_agent_t:tcp_socket getattr;
+allow cfengine_execd_t cfengine_agent_t:unix_dgram_socket getattr;
+allow cfengine_execd_t cfengine_agent_t:fd use;
+
+dev_read_realtime_clock(cfengine_execd_t)
+hostname_exec(cfengine_execd_t)
+
+mcfengine_read_policy(cfengine_execd_t)
+
+files_getattr_all_dirs(cfengine_execd_t)
+files_getattr_all_files(cfengine_execd_t)
+files_getattr_all_symlinks(cfengine_execd_t)
+allow cfengine_execd_t cfengine_agent_exec_t:file getattr;
+
+optional_policy(`
+	gen_require(`
+		type cfengine_monitord_exec_t;
+	')
+	allow cfengine_execd_t cfengine_monitord_exec_t:file getattr;
+')
+#allow cfengine_execd_t cfengine_serverd_exec_t:file getattr;
+mcfengine_manage_logs(cfengine_execd_t)
+domtrans_pattern(cfengine_execd_t, cfengine_agent_exec_t, cfengine_agent_t)
+storage_getattr_fixed_disk_dev(cfengine_execd_t)
+mcfengine_exec_modules(cfengine_execd_t)
+mcfengine_manage_cache(cfengine_execd_t)
+#usefull?
+kernel_read_kernel_sysctls(cfengine_execd_t)
+
+manage_files_pattern(cfengine_execd_t, cfengine_tmp_t, cfengine_tmp_t)
+manage_dirs_pattern(cfengine_execd_t, cfengine_tmp_t, cfengine_tmp_t)
+files_tmp_filetrans(cfengine_execd_t, cfengine_tmp_t, file)
+
+miscfiles_read_hwdata(cfengine_execd_t)
+files_list_usr(cfengine_execd_t)
+
+allow cfengine_execd_t self:process { signull sigkill };
+
+#modules
+#sort
+allow cfengine_execd_t self:process getsched;
+#/sort
+
+#detect_hw
+kernel_read_network_state(cfengine_execd_t)
+#/detect_hw
+
+fstools_domtrans(cfengine_execd_t)
+
+mcfengine_write_cache(fsadm_t)
+files_read_usr_files(cfengine_execd_t)
+
+fs_getattr_xattr_fs(cfengine_execd_t)
+fs_getattr_all_xattr_fs(cfengine_agent_t)
+
+optional_policy(`
+	gen_require(`
+		type crond_t;
+	')
+	allow crond_t cfengine_agent_t:fifo_file write;
+	allow crond_t cfengine_agent_t:fd use;
+	allow crond_t cfengine_execd_t:fd use;
+')
+optional_policy(`
+	gen_require(`
+		type system_cronjob_t;
+	')
+	allow system_cronjob_t cfengine_log_t:dir { remove_name write add_name };
+	read_files_pattern(system_cronjob_t, cfengine_log_t, cfengine_log_t)
+	allow system_cronjob_t cfengine_log_t:file { unlink };
+	allow system_cronjob_t cfengine_log_t:lnk_file read;
+')
+#/module
+
+
+
+
+domain_auto_transition_pattern(cfengine_agent_t, cf_module_exec_t, cf_module_t)
+domain_auto_transition_pattern(cfengine_execd_t, cf_module_exec_t, cf_module_t)
+
+allow cf_module_t cfengine_agent_t:fd use;
+allow cf_module_t cfengine_agent_t:process sigchld;
+allow cf_module_t cfengine_agent_t:fifo_file { getattr write ioctl };
+allow cf_module_t cfengine_execd_t:fd use;
+allow cf_module_t cfengine_execd_t:fifo_file { getattr read write ioctl };
+allow cf_module_t cfengine_execd_t:process sigchld;
+
+allow cf_module_t self:capability { dac_read_search dac_override sys_admin sys_ptrace sys_rawio chown };
+allow cf_module_t self:fifo_file { read write ioctl getattr };
+allow cf_module_t self:process { getsched signal };
+
+manage_files_pattern(cfengine_agent_t, cf_module_exec_t, cf_module_exec_t)
+manage_dirs_pattern(cfengine_agent_t, cf_module_exec_t, cf_module_exec_t)
+
+manage_files_pattern(cf_module_t, cfengine_tmp_t, cfengine_tmp_t)
+manage_dirs_pattern(cf_module_t, cfengine_tmp_t, cfengine_tmp_t)
+files_tmp_filetrans(cf_module_t, cfengine_tmp_t, file)
+
+can_exec(cf_module_t, cf_module_exec_t);
+
+corecmd_exec_bin(cf_module_t)
+corecmd_exec_shell(cf_module_t)
+dev_read_realtime_clock(cf_module_t)
+dev_read_sysfs(cf_module_t)
+domain_read_all_domains_state(cf_module_t)
+files_read_etc_files(cf_module_t)
+files_read_all_files(cf_module_t)
+files_read_non_security_files(cf_module_t)
+kernel_read_network_state(cf_module_t)
+kernel_read_kernel_sysctls(cf_module_t)
+kernel_search_network_sysctl(cf_module_t)
+fstools_exec(cf_module_t)
+fs_getattr_xattr_fs(cf_module_t)
+gpg_exec(cf_module_t)
+hostname_exec(cf_module_t)
+init_getattr_initctl(cf_module_t)
+init_domtrans_script(cf_module_t)
+miscfiles_read_hwdata(cf_module_t)
+miscfiles_read_localization(cf_module_t)
+mount_exec(cf_module_t)
+storage_getattr_fixed_disk_dev(cf_module_t)
+storage_raw_read_fixed_disk(cf_module_t)
+sysnet_exec_ifconfig(cf_module_t)
+sysnet_dns_name_resolve(cf_module_t)
+sysnet_manage_config(cf_module_t)
+
+files_manage_etc_files(cf_module_t)
+
+optional_policy(`
+	gen_require(`
+		type portage_conf_t;
+	')
+	portage_read_db(cf_module_t)
+	read_files_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+	manage_files_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+	relabel_files_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+	relabel_dirs_pattern(cf_module_t, portage_conf_t, portage_conf_t)
+')
+
+#pour restarter
+logging_append_all_logs(cf_module_t)
+
+files_getattr_all_dirs(cf_module_t)
+files_getattr_all_files(cf_module_t)
+files_getattr_all_symlinks(cf_module_t)
+files_getattr_all_pipes(cf_module_t)
+files_getattr_all_sockets(cf_module_t)
+mfiles_getattr_all_chr(cf_module_t)
+mcfengine_manage_cache(cf_module_t)
+mcfengine_manage_logs(cf_module_t)
+mcfengine_manage(cf_module_t)
+
+selinux_getattr_fs(cf_module_t)
+selinux_get_enforce_mode(cf_module_t)
+selinux_set_enforce_mode(cf_module_t)
+selinux_load_policy(cf_module_t)
+selinux_set_generic_booleans(cf_module_t)
+selinux_set_all_booleans(cf_module_t)
+seutil_domtrans_semanage(cf_module_t)
+
+userdom_use_user_ptys(cf_module_t)
+
+#pour un sed mais sur quoi?
+allow cf_module_t self:process setfscreate;
+
+#logger
+#allow cf_module_t self:unix_dgram_socket create;
+logging_send_syslog_msg(cf_module_t)
+
+#pour le ping
+#allow cf_module_t self:process { getcap setcap };
+optional_policy(`
+	gen_require(`
+		type ping_t;
+	')
+	netutils_domtrans_ping(cf_module_t)
+#	allow ping_t cfengine_agent_t:fd use;
+#	allow ping_t cfengine_execd_t:fd use;
+#	allow ping_t cfengine_agent_t:fifo_file write;
+	mcfengine_manage(ping_t)
+	allow ping_t self:icmp_socket create;
+')
+#/ping
+
+optional_policy(`
+	gen_require(`
+		type batch_tmp_t;
+	')
+	manage_files_pattern(cf_module_t, batch_tmp_t, batch_tmp_t)
+	manage_dirs_pattern(cf_module_t, batch_tmp_t, batch_tmp_t)
+	allow cfengine_agent_t batch_tmp_t:dir setattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type boot_t;
+	')
+	allow cfengine_agent_t boot_t:file setattr;
+	files_list_boot(cfengine_agent_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type ftp_etc_t;
+	')
+	manage_files_pattern(cf_module_t, ftp_etc_t, ftp_etc_t)
+	manage_dirs_pattern(cf_module_t, ftp_etc_t, ftp_etc_t)
+	manage_lnk_files_pattern(cf_module_t, ftp_etc_t, ftp_etc_t)
+	manage_files_pattern(cfengine_agent_t, ftp_etc_t, ftp_etc_t)
+	manage_dirs_pattern(cfengine_agent_t, ftp_etc_t, ftp_etc_t)
+	manage_lnk_files_pattern(cfengine_agent_t, ftp_etc_t, ftp_etc_t)
+	allow cfengine_agent_t ftp_etc_t:dir setattr;
+	allow cfengine_agent_t ftp_etc_t:file setattr;
+
+')
+
+optional_policy(`
+        gen_require(`
+		type logrotate_t;
+		type cfengine_var_lib_t;
+        ')
+	allow logrotate_t cfengine_var_lib_t:dir { read write remove_name add_name };
+	allow logrotate_t cfengine_var_lib_t:file { getattr read write open rename create setattr ioctl unlink };
+')
+
+#cf_report
+optional_policy(`
+	gen_require(`
+		type http_port_t;
+	')
+	#corenet_tcp_sendrecv_http_port(cf_module_t)
+	allow cf_module_t http_port_t:tcp_socket name_connect;
+')
+#/cf_report
+
+can_exec(cf_module_t, cfengine_agent_exec_t)
+
+optional_policy(`
+	gen_require(`
+		type var_log_t;
+	')
+	allow cfengine_agent_t var_log_t:dir setattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type cfengine_execd_exec_t;
+	')
+	allow cfengine_agent_t cfengine_execd_exec_t:file setattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type lvm_t;
+	')
+	mcfengine_manage(lvm_t)
+')
+
+init_domtrans(cfengine_agent_t)
+
+optional_policy(`
+	gen_require(`
+		type getty_t;
+	')
+	allow cf_module_t getty_t:process signal;
+')
+
+optional_policy(`
+	gen_require(`
+		type xymon_etc_t;
+	')
+	manage_files_pattern(cfengine_agent_t, xymon_etc_t, xymon_etc_t)
+	allow cfengine_agent_t xymon_etc_t:file { relabelfrom relabelto };
+')
+
+#rcupdate
+allow cfengine_agent_t etc_t:lnk_file create;
+
+optional_policy(`
+	gen_require(`
+		type iptables_t;
+	')
+	mcfengine_manage(iptables_t)
+	mcfengine_write_cache(iptables_t)
+')
+iptables_domtrans(cf_module_t)
+
+#pour genminfo
+optional_policy(`
+	gen_require(`
+		type gcc_config_t;
+	')
+	portage_domtrans_gcc_config(cf_module_t)
+	mcfengine_manage(gcc_config_t)
+	mcfengine_write_cache(gcc_config_t)
+')
+optional_policy(`
+	portage_domtrans(cf_module_t)
+	consoletype_exec(cf_module_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type groupadd_t;
+	')
+	allow groupadd_t cfengine_execd_t:fd use;
+')
+optional_policy(`
+	gen_require(`
+		type useradd_t;
+	')
+	allow useradd_t cfengine_execd_t:fd use;
+	files_list_mnt(useradd_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type backupper_exec_t;
+	')
+	allow cfengine_agent_t backupper_exec_t:dir { add_name write remove_name };
+	allow cfengine_agent_t backupper_exec_t:file { rename unlink create write setattr };
+')
+
+fs_getattr_pstorefs(cfengine_agent_t)
+
+optional_policy(`
+	gen_require(`
+		type kmod_t;
+	')
+	mcfengine_manage(kmod_t)
+')
+
+# manage /lib/modules
+optional_policy(`
+	gen_require(`
+		type modules_dep_t;
+	')
+	allow cfengine_agent_t modules_dep_t:file setattr;
+')
+
+#eselect binutils ?
+allow cf_module_t cfengine_tmp_t:file execute;
+
+# portageq ?
+allow cfengine_agent_t cfengine_tmp_t:file execute;
+
+
+optional_policy(`
+	gen_require(`
+		type clamd_var_lib_t;
+	')
+	allow cfengine_agent_t clamd_var_lib_t:file setattr;
+')
+
+allow cfengine_execd_t cfengine_agent_t:process  { sigkill signal signull };
+
+optional_policy(`
+	gen_require(`
+		type mnt_t;
+	')
+	allow cfengine_agent_t mnt_t:dir setattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type udevadm_t;
+	')
+	mcfengine_manage(udevadm_t)
+')
+
+mcfengine_manage(udev_t)

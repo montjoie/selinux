@@ -1,0 +1,5 @@
+/usr/sbin/cf-agent      --      gen_context(system_u:object_r:cfengine_agent_exec_t,s0)
+
+/var/cache/cfengine(/.*)?		gen_context(system_u:object_r:cfengine_cache_t, s0)
+/var/log/cfengine(/.*)?			gen_context(system_u:object_r:cfengine_log_t, s0)
+/var/cfengine/modules(/.*)?		gen_context(system_u:object_r:cf_module_exec_t, s0)
