@@ -1,0 +1,59 @@
+## <summary></summary>
+
+########################################
+## <summary>
+##      Getattr config files in /etc.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mfiles_getattr_config_files',`
+        gen_require(`
+                attribute configfile;
+        ')
+
+        allow $1 configfile:dir list_dir_perms;
+	allow $1 configfile:file getattr;
+#        read_files_pattern($1, configfile, configfile)
+#        read_lnk_files_pattern($1, configfile, configfile)
+')
+
+########################################
+## <summary>
+##      Getattr config files in /etc.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mfiles_search_var_db',`
+        gen_require(`
+                type var_db_t;
+        ')
+
+	allow $1 var_db_t:dir search;
+')
+
+########################################
+## <summary>
+##      Get the attributes of all char.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mfiles_getattr_all_chr',`
+        gen_require(`
+                attribute file_type;
+        ')
+
+        getattr_chr_files_pattern($1, file_type, file_type)
+')
+

@@ -1,0 +1,51 @@
+policy_module(m_misc, 0.1)
+
+# when echo "pass" | run_init
+#[  377.328843] audit: type=1400 audit(1610400841.388:637): avc:  denied  { use } for  pid=3428 comm=\"open_init_pty\" path=\"pipe:[16447]\" dev=\"pipefs\" ino=16447 scontext=system_u:system_r:initrc_t tcontext=root:sysadm_r:sysadm_t tclass=fd permissive=1
+#[  377.328896] audit: type=1400 audit(1610400841.388:638): avc:  denied  { read } for  pid=3428 comm=\"open_init_pty\" path=\"pipe:[16447]\" dev=\"pipefs\" ino=16447 scontext=system_u:system_r:initrc_t tcontext=root:sysadm_r:sysadm_t tclass=fifo_file permissive=1
+optional_policy(`
+	gen_require(`
+		type sysadm_t;
+		type initrc_t;
+	')
+	sysadm_use_fds(initrc_t)
+	#sysadm_rw_pipes(initrc_t) ??
+	allow initrc_t sysadm_t:fifo_file read;
+')
+
+#[  201.721964] audit: type=1400 audit(1610401788.727:619): avc:  denied  { read } for  pid=1385 comm="dmesg" name="dumb" dev="nbd0" ino=11260 scontext=root:sysadm_r:dmesg_t tcontext=system_u:object_r:etc_t tclass=file permissive=1
+#[  201.722018] audit: type=1400 audit(1610401788.727:620): avc:  denied  { open } for  pid=1385 comm="dmesg" path="/etc/terminfo/d/dumb" dev="nbd0" ino=11260 scontext=root:sysadm_r:dmesg_t tcontext=system_u:object_r:etc_t tclass=file permissive=1
+#[  201.722041] audit: type=1400 audit(1610401788.727:621): avc:  denied  { getattr } for  pid=1385 comm="dmesg" path="/etc/terminfo/d/dumb" dev="nbd0" ino=11260 scontext=root:sysadm_r:dmesg_t tcontext=system_u:object_r:etc_t tclass=file permissive=1
+
+optional_policy(`
+	gen_require(`
+		type dmesg_t;
+	')
+	files_read_etc_files(dmesg_t)
+')
+
+# already in refpolicy
+optional_policy(`
+	gen_require(`
+		type udev_t;
+	')
+	systemd_map_hwdb(udev_t)
+	systemd_read_hwdb(udev_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type udevadm_t;
+		type udev_runtime_t;
+	')
+	allow udevadm_t udev_runtime_t:dir watch;
+')
+
+#[  449.969404] audit: type=1400 audit(1610428421.410:133): avc:  denied  { ioctl } for  pid=4777 comm=\"open_init_pty\" path=\"pipe:[18917]\" dev=\"pipefs\" ino=18917 ioctlcmd=0x5401 scontext=system_u:system_r:initrc_t tcontext=root:sysadm_r:sysadm_t tclass=fifo_file permissive=1
+optional_policy(`
+	gen_require(`
+		type initrc_t;
+		type sysadm_t;
+	')
+	allow initrc_t sysadm_t:fifo_file ioctl;
+')

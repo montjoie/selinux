@@ -1,0 +1,5 @@
+
+/opt/montjoie/gentoo/gentoo_news_cleaner	--	gen_context(system_u:object_r:bin_t,s0)
+/opt/montjoie/gentoo/portage_gen_upgrade_list	--	gen_context(system_u:object_r:bin_t,s0)
+/opt/montjoie/gentoo/portage_gen_package_list	--	gen_context(system_u:object_r:bin_t,s0)
+
