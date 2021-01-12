@@ -1,0 +1,2 @@
+
+/lava-[0-9]+/bin(/.*)		gen_context(system_u:object_r:bin_t,s0)

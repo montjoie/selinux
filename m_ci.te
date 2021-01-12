@@ -1,0 +1,10 @@
+policy_module(m_ci, 0.1)
+
+optional_policy(`
+	gen_require(`
+		type dmesg_t;
+		type user_tmpfs_t;
+	')
+	allow dmesg_t user_tmpfs_t:file { getattr ioctl write };
+')
+
