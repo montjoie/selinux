@@ -1,0 +1,652 @@
+policy_module(xymon, 0.3)
+
+gen_require(`
+	type system_cronjob_t;
+	type home_root_t;
+	type portage_tmp_t;
+	type tmpfs_t;
+	type user_devpts_t;
+	type security_t;
+	type semanage_store_t;
+	type fsadm_t;
+	type system_cron_spool_t;
+	type initrc_tmp_t;
+	type file_context_t;
+	type modules_object_t;
+	type user_tmp_t;
+	type mount_var_run_t;
+	attribute domain;
+	attribute file_type;
+	type etc_runtime_t;
+')
+
+type xymon_t;
+type xymon_exec_t;
+domain_type(xymon_t)
+domain_entry_file(xymon_t, xymon_exec_t)
+init_daemon_domain(xymon_t, xymon_exec_t)
+
+type xymon_tmp_t;
+files_tmp_file(xymon_tmp_t)
+
+type xymon_etc_t;
+files_config_file(xymon_etc_t)
+
+type xymon_log_t;
+logging_log_file(xymon_log_t)
+
+type xymon_var_run_t;
+files_runtime_file(xymon_var_run_t)
+
+type xymon_port_t;
+corenet_port(xymon_port_t)
+
+
+manage_files_pattern(xymon_t, xymon_var_run_t, xymon_var_run_t)
+files_runtime_filetrans(xymon_t, xymon_var_run_t, { dir file})
+
+manage_files_pattern(xymon_t, xymon_tmp_t, xymon_tmp_t)
+manage_dirs_pattern(xymon_t, xymon_tmp_t, xymon_tmp_t)
+files_tmp_filetrans(xymon_t, xymon_tmp_t, file)
+
+manage_files_pattern(xymon_t, xymon_log_t, xymon_log_t)
+manage_dirs_pattern(xymon_t, xymon_log_t, xymon_log_t)
+
+manage_files_pattern(xymon_t, xymon_log_t, xymon_log_t)
+manage_dirs_pattern(xymon_t, xymon_log_t, xymon_log_t)
+
+read_files_pattern(xymon_t, xymon_etc_t, xymon_etc_t)
+list_dirs_pattern(xymon_t, xymon_etc_t, xymon_etc_t)
+
+
+corecmd_exec_bin(xymon_t)
+corecmd_exec_shell(xymon_t)
+dev_list_sysfs(xymon_t)
+dev_read_sysfs(xymon_t)
+files_getattr_home_dir(xymon_t)
+files_read_etc_files(xymon_t)
+files_read_etc_runtime_files(xymon_t)
+files_read_usr_files(xymon_t)
+files_search_home(xymon_t)
+files_search_mnt(xymon_t)
+fs_getattr_binfmt_misc_dirs(xymon_t)
+fs_getattr_xattr_fs(xymon_t)
+fs_list_cgroup_dirs(xymon_t)
+kernel_list_proc(xymon_t)
+domain_read_all_domains_state(xymon_t)
+kernel_read_fs_sysctls(xymon_t)
+kernel_read_kernel_sysctls(xymon_t)
+kernel_read_network_state(xymon_t)
+kernel_read_system_state(xymon_t)
+kernel_search_network_sysctl(xymon_t)
+init_read_utmp(xymon_t)
+logging_list_logs(xymon_t)
+logging_read_all_logs(xymon_t)
+logging_read_syslog_config(xymon_t)
+miscfiles_read_localization(xymon_t)
+miscfiles_read_man_pages(xymon_t)
+mount_exec(xymon_t)
+storage_getattr_fixed_disk_dev(xymon_t)
+sysnet_dns_name_resolve(xymon_t)
+sysnet_exec_ifconfig(xymon_t)
+sysnet_read_config(xymon_t)
+
+userdom_getattr_user_home_dirs(xymon_t)
+
+allow xymon_t xymon_port_t:tcp_socket name_connect;
+allow xymon_t self:fifo_file { read write getattr ioctl };
+allow xymon_t self:process signal;
+allow xymon_t portage_tmp_t:dir getattr;
+allow xymon_t self:unix_dgram_socket create;
+allow xymon_t tmpfs_t:dir { getattr search };
+allow xymon_t user_devpts_t:chr_file getattr;
+
+
+type xymon_check_t;
+type xymon_check_exec_t;
+domain_type(xymon_check_t)
+domain_entry_file(xymon_check_t, xymon_check_exec_t)
+
+#domain_auto_trans(system_cronjob_t, xymon_check_exec_t, xymon_check_t)
+#role system_r types xymon_check_t;
+cron_system_entry(xymon_check_t, xymon_check_exec_t)
+cron_sigchld(xymon_check_t)
+cron_use_fds(xymon_check_t)
+cron_rw_pipes(xymon_check_t)
+
+files_read_mnt_files(xymon_check_t)
+files_list_mnt(xymon_check_t)
+
+read_files_pattern(xymon_check_t, xymon_etc_t, xymon_etc_t)
+list_dirs_pattern(xymon_check_t, xymon_etc_t, xymon_etc_t)
+
+manage_files_pattern(xymon_check_t, xymon_tmp_t, xymon_tmp_t)
+manage_dirs_pattern(xymon_check_t, xymon_tmp_t, xymon_tmp_t)
+files_tmp_filetrans(xymon_check_t, xymon_tmp_t, file)
+
+list_dirs_pattern(xymon_check_t, xymon_check_exec_t, xymon_check_exec_t)
+
+auth_append_login_records(xymon_check_t) # wtmp utile ?
+bind_read_config(xymon_check_t)
+bind_read_zone(xymon_check_t)
+corecmd_exec_bin(xymon_check_t)
+corecmd_exec_shell(xymon_check_t)
+dev_list_sysfs(xymon_check_t)
+dev_read_sysfs(xymon_check_t)
+dev_getattr_generic_usb_dev(xymon_check_t)
+dev_read_lvm_control(xymon_check_t)
+dev_read_realtime_clock(xymon_check_t)
+dev_getattr_generic_chr_files(xymon_check_t)
+#dev_getattr_netcontrol_dev(xymon_check_t) # deprecated by dev_getattr_pmqos_dev
+dev_getattr_all_chr_files(xymon_check_t)
+
+files_list_default(xymon_check_t)
+files_list_lost_found(xymon_check_t)
+files_read_etc_files(xymon_check_t)
+files_read_etc_runtime_files(xymon_check_t)
+files_read_usr_files(xymon_check_t)
+files_read_var_files(xymon_check_t)
+fs_getattr_binfmt_misc_dirs(xymon_check_t)
+fs_getattr_xattr_fs(xymon_check_t)
+fs_getattr_all_fs(xymon_check_t)
+fs_list_cgroup_dirs(xymon_check_t)
+#fstools_exec(xymon_check_t)
+fstools_domtrans(xymon_check_t)
+kernel_list_proc(xymon_check_t)
+domain_read_all_domains_state(xymon_check_t)
+domain_getattr_all_domains(xymon_check_t)
+kernel_read_fs_sysctls(xymon_check_t)
+kernel_read_kernel_sysctls(xymon_check_t)
+kernel_read_network_state(xymon_check_t)
+kernel_read_system_state(xymon_check_t)
+kernel_search_network_sysctl(xymon_check_t)
+hostname_exec(xymon_check_t)
+clock_exec(xymon_check_t)
+init_getattr_initctl(xymon_check_t)
+init_read_utmp(xymon_check_t)
+init_read_script_status_files(xymon_check_t)
+logging_list_logs(xymon_check_t)
+logging_read_all_logs(xymon_check_t)
+logging_read_syslog_config(xymon_check_t)
+logging_send_syslog_msg(xymon_check_t)
+logging_read_audit_config(xymon_check_t)
+logging_read_audit_log(xymon_check_t)
+
+miscfiles_read_localization(xymon_check_t)
+#modutils_list_module_config(xymon_check_t)
+modutils_read_module_config(xymon_check_t)
+mount_exec(xymon_check_t)
+mta_read_config(xymon_check_t)
+portage_domtrans_gcc_config(xymon_check_t)
+#bug
+portage_ro_role(xymon_check_t, xymon_check_t)
+seutil_read_config(xymon_check_t)
+seutil_read_bin_policy(xymon_check_t)
+seutil_read_default_contexts(xymon_check_t)
+storage_raw_read_fixed_disk(xymon_check_t) # pour sonde fs
+storage_getattr_fixed_disk_dev(xymon_check_t)
+sysnet_dns_name_resolve(xymon_check_t)
+corenet_udp_bind_generic_node(xymon_check_t)
+sysnet_exec_ifconfig(xymon_check_t)
+su_exec(xymon_check_t)
+term_getattr_all_ptys(xymon_check_t)
+udev_read_rules_files(xymon_check_t)
+#userdom_getattr_user_home_dirs(xymon_check_t)
+userdom_list_user_home_dirs(xymon_check_t)
+optional_policy(`
+	gen_require(`
+		type ssh_home_t;
+	')
+	#pour test check_user
+	read_files_pattern(xymon_check_t, ssh_home_t, ssh_home_t)
+	list_dirs_pattern(xymon_check_t, ssh_home_t, ssh_home_t)
+')
+
+mfiles_getattr_config_files(xymon_check_t)
+# to be re enabled # mfiles_search_var_db(xymon_t)
+
+allow xymon_check_t xymon_port_t:tcp_socket name_connect;
+
+#portage_domtrans(xymon_check_t)
+portage_run(xymon_check_t, system_r)
+files_getattr_all_files(xymon_check_t)
+files_read_usr_src_files(xymon_check_t)
+
+allow xymon_check_t xymon_tmp_t:file execute;
+allow xymon_check_t xymon_check_exec_t:file execute_no_trans;
+allow xymon_check_t tmpfs_t:dir read;
+
+
+#allow xymon_check_t file_type:chr_file getattr;
+allow xymon_check_t self:capability { setuid ipc_lock dac_override chown fsetid setgid sys_rawio fowner };
+allow xymon_check_t self:capability { dac_read_search audit_control };
+allow xymon_check_t self:fifo_file { read write getattr ioctl };
+allow xymon_check_t self:netlink_selinux_socket { bind create };
+allow xymon_check_t self:process { setsched setfscreate setexec getsched getattr signal };
+allow xymon_check_t self:unix_dgram_socket { write create connect };
+allow xymon_check_t self:key { write search link };
+
+optional_policy(`
+	gen_require(`
+		attribute configfile;
+	')
+	allow xymon_check_t configfile:dir read;
+')
+allow xymon_check_t policy_config_t:dir read;
+allow xymon_check_t etc_runtime_t:dir read;
+allow xymon_check_t system_cron_spool_t:dir read;
+allow xymon_check_t udev_rules_t:dir read;
+allow xymon_check_t initrc_tmp_t:dir read;
+allow xymon_check_t portage_tmp_t:fifo_file getattr;
+allow xymon_check_t portage_tmp_t:sock_file getattr;
+allow xymon_check_t file_context_t:dir read;
+allow xymon_check_t modules_object_t:dir read;
+allow xymon_check_t user_tmp_t:dir read;
+
+allow fsadm_t xymon_tmp_t:file { write read getattr append };
+
+optional_policy(`
+	#role unconfined_r types xymon_check_t;
+	gen_require(`
+		type unconfined_t;
+	')
+	unconfined_run_to(xymon_check_t, xymon_check_exec_t)
+	allow xymon_check_t unconfined_t:fd use;
+#	allow xymon_check_t user_devpts_t:chr_file { read write };
+	domain_obj_id_change_exemption(xymon_check_t)
+')
+
+
+allow xymon_check_t semanage_store_t:dir read;
+#runcon
+#allow xymon_check_t security_t:security { check_context compute_user compute_av };
+allow xymon_check_t security_t:security { check_context compute_user };
+allow xymon_check_t security_t:file write;
+#runcon
+
+optional_policy(`
+	gen_require(`
+		type portage_conf_t;
+		type portage_db_t;
+		type portage_ebuild_t;
+		type portage_gpg_t;
+		type portage_devpts_t;
+		type portage_tmp_t;
+	')
+	read_files_pattern(xymon_check_t, portage_conf_t, portage_conf_t)
+	read_files_pattern(xymon_check_t, portage_db_t, portage_db_t)
+	read_files_pattern(xymon_check_t, portage_ebuild_t, portage_ebuild_t)
+	read_files_pattern(xymon_check_t, portage_gpg_t, portage_gpg_t)
+#	read_files_pattern(xymon_check_t, portage_tmp_t, portage_tmp_t)
+	read_lnk_files_pattern(xymon_check_t, portage_tmp_t, portage_tmp_t)
+	list_dirs_pattern(xymon_check_t, portage_conf_t, portage_conf_t)
+	list_dirs_pattern(xymon_check_t, portage_db_t, portage_db_t)
+	list_dirs_pattern(xymon_check_t, portage_ebuild_t, portage_ebuild_t)
+	list_dirs_pattern(xymon_check_t, portage_gpg_t, portage_gpg_t)
+	list_dirs_pattern(xymon_check_t, portage_tmp_t, portage_tmp_t)
+	allow xymon_check_t portage_devpts_t:chr_file { rw_chr_file_perms setattr };
+        term_create_pty(xymon_check_t, portage_devpts_t)
+')
+
+optional_policy(`
+	openvpn_read_config(xymon_check_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type ntp_conf_t;
+	')
+	allow xymon_check_t ntp_conf_t:file read_file_perms;
+')
+
+
+optional_policy(`
+	gen_require(`
+		role unconfined_r;
+		type gpg_t;
+	')
+	#temp portage
+	role unconfined_r types gpg_t;
+')
+
+dontaudit xymon_t etc_runtime_t:file write;
+
+allow gcc_config_t xymon_tmp_t:file write;
+
+allow xymon_t mount_var_run_t:dir search;
+allow xymon_t mount_var_run_t:file { read write getattr open };
+
+selinux_getattr_fs(xymon_check_t)
+#runcon
+allow xymon_check_t security_t:file { read open };
+#end runcon
+
+optional_policy(`
+        gen_require(`
+		type lvm_etc_t;
+	')
+	read_files_pattern(xymon_check_t, lvm_etc_t, lvm_etc_t)
+	list_dirs_pattern(xymon_check_t, lvm_etc_t, lvm_etc_t)
+')
+
+optional_policy(`
+        gen_require(`
+		type lvm_metadata_t;
+	')
+	read_files_pattern(xymon_check_t, lvm_metadata_t, lvm_metadata_t)
+	list_dirs_pattern(xymon_check_t, lvm_metadata_t, lvm_metadata_t)
+')
+
+optional_policy(`
+	cfengine_read_lib_files(xymon_check_t)
+	mcfengine_read_logs(xymon_check_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type dovecot_cert_t;
+		type dovecot_etc_t;
+	')
+	read_files_pattern(xymon_check_t, dovecot_etc_t, dovecot_etc_t)
+	list_dirs_pattern(xymon_check_t, dovecot_cert_t, dovecot_cert_t)
+	read_files_pattern(xymon_check_t, dovecot_cert_t, dovecot_cert_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type logrotate_var_lib_t;
+	')
+	logrotate_exec(xymon_check_t)
+	read_files_pattern(xymon_check_t, logrotate_var_lib_t, logrotate_var_lib_t)
+')
+
+optional_policy(`
+	postfix_domtrans_map(xymon_check_t)
+	postfix_domtrans_postqueue(xymon_check_t)
+	xymon_check(postfix_map_t)
+	allow postfix_postqueue_t xymon_tmp_t:file { getattr write };
+')
+
+optional_policy(`
+	gen_require(`
+		type postfix_showq_t;
+	')
+	xymon_check(postfix_showq_t)
+')
+optional_policy(`
+	gen_require(`
+		type postfix_etc_t;
+	')
+	read_files_pattern(xymon_check_t, postfix_etc_t, postfix_etc_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type sshd_tmp_t;
+	')
+	list_dirs_pattern(xymon_check_t, sshd_tmp_t, sshd_tmp_t)
+')
+optional_policy(`
+	gen_require(`
+		type sshd_t;
+	')
+	allow xymon_check_t sshd_t:fd use;
+')
+
+optional_policy(`
+	apache_read_config(xymon_check_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type httpd_log_t;
+	')
+	dontaudit xymon_check_t httpd_log_t:file write;
+')
+optional_policy(`
+	gen_require(`
+		type xferlog_t;
+	')
+	dontaudit xymon_check_t xferlog_t:file write;
+')
+
+optional_policy(`
+	gen_require(`
+		type batch_tmp_t;
+	')
+	list_dirs_pattern(xymon_check_t, batch_tmp_t, batch_tmp_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type ftp_etc_t;
+	')
+	read_files_pattern(xymon_check_t, ftp_etc_t, ftp_etc_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type cfengine_var_lib_t;
+	')
+	allow xymon_check_t cfengine_var_lib_t:dir read;
+')
+
+iptables_domtrans(xymon_check_t)
+
+dontaudit xymon_check_t self:capability sys_ptrace;
+
+optional_policy(`
+	gen_require(`
+		type ulogd_modules_t;
+	')
+	list_dirs_pattern(xymon_check_t, ulogd_modules_t, ulogd_modules_t)
+')
+
+domain_getattr_all_stream_sockets(xymon_check_t)
+kernel_read_vm_overcommit_sysctl(xymon_check_t)
+
+miscfiles_read_all_certs(xymon_check_t)
+
+optional_policy(`
+	gen_require(`
+		type man_t;
+	')
+	miscfiles_search_man_pages(xymon_check_t)
+	list_dirs_pattern(xymon_check_t, man_t, man_t)
+')
+
+#lsof
+dontaudit xymon_check_t file_type:sock_file getattr;
+dontaudit xymon_check_t domain:unix_dgram_socket getattr;
+dontaudit xymon_check_t domain:sock_file getattr;
+dontaudit xymon_check_t domain:tcp_socket getattr;
+dontaudit xymon_check_t domain:udp_socket getattr;
+dontaudit xymon_check_t domain:fifo_file getattr;
+
+optional_policy(`
+	gen_require(`
+		type auditd_t;
+	')
+	allow xymon_check_t auditd_t:netlink_audit_socket getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type dovecot_var_run_t;
+		type dovecot_spool_t;
+	')
+	allow xymon_check_t dovecot_var_run_t:fifo_file getattr;
+	allow xymon_t dovecot_spool_t:dir getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type proc_kmsg_t;
+	')
+	allow xymon_check_t proc_kmsg_t:file getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type udev_t;
+	')
+	allow xymon_check_t udev_t:netlink_kobject_uevent_socket getattr;
+')
+
+#/lsof
+
+optional_policy(`
+	gen_require(`
+		type httpd_modules_t;
+	')
+	list_dirs_pattern(xymon_check_t, httpd_modules_t, httpd_modules_t)
+')
+
+optional_policy(`
+	gen_require(`
+		type systemd_unit_t;
+	')
+	list_dirs_pattern(xymon_check_t, systemd_unit_t, systemd_unit_t)
+')
+
+#logrotate test
+optional_policy(`
+	gen_require(`
+		type munin_log_t;
+	')
+	dontaudit xymon_check_t munin_log_t:file write;
+')
+#logrotate test
+optional_policy(`
+	gen_require(`
+		type ulogd_var_log_t;
+	')
+	dontaudit xymon_check_t ulogd_var_log_t:file write;
+')
+#logrotate test
+optional_policy(`
+	gen_require(`
+		type portage_log_t;
+	')
+	dontaudit xymon_check_t portage_log_t:file write;
+')
+#logrotate test
+optional_policy(`
+	gen_require(`
+		type var_log_t;
+	')
+	dontaudit xymon_check_t var_log_t:file write;
+')
+
+optional_policy(`
+	gen_require(`
+		type src_t;
+	')
+	allow xymon_t src_t:dir getattr;
+')
+
+fs_getattr_pstore_dirs(xymon_t)
+
+files_list_spool(xymon_check_t)
+mta_getattr_spool(xymon_check_t)
+
+optional_policy(`
+	gen_require(`
+		type backupper_exec_t;
+	')
+	allow xymon_check_t backupper_exec_t:dir read;
+')
+
+optional_policy(`
+	gen_require(`
+		type kmod_t;
+	')
+	allow kmod_t xymon_check_t:fifo_file write;
+	allow kmod_t xymon_check_t:fd use;
+')
+
+optional_policy(`
+	gen_require(`
+		type net_conf_t;
+	')
+	allow xymon_check_t net_conf_t:dir { read };
+')
+
+optional_policy(`
+	gen_require(`
+		type user_home_dir_t;
+	')
+	allow xymon_t user_home_dir_t:dir search;
+')
+
+optional_policy(`
+	gen_require(`
+		type var_spool_t;
+	')
+	allow xymon_t var_spool_t:dir search;
+')
+
+optional_policy(`
+	gen_require(`
+		type loop_control_device_t;
+	')
+	allow xymon_t loop_control_device_t:chr_file getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type var_run_t;
+	')
+	allow xymon_check_t var_run_t:fifo_file getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type named_t;
+	')
+	allow xymon_check_t named_t:netlink_route_socket getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type named_zone_t;
+	')
+	allow xymon_check_t named_zone_t:dir read;
+')
+
+optional_policy(`
+	gen_require(`
+		type ntpd_t;
+	')
+	allow xymon_check_t ntpd_t:netlink_route_socket getattr;
+')
+optional_policy(`
+	gen_require(`
+		type ulogd_t;
+	')
+	allow xymon_check_t ulogd_t:netlink_netfilter_socket getattr;
+	allow xymon_check_t ulogd_t:netlink_route_socket getattr;
+')
+
+optional_policy(`
+	gen_require(`
+		type var_lib_t;
+	')
+	allow xymon_t var_lib_t:dir { getattr search };
+')
+
+optional_policy(`
+	gen_require(`
+		type mnt_t;
+	')
+	allow xymon_check_t mnt_t:file { ioctl open read };
+')
+
+optional_policy(`
+	gen_require(`
+		type portage_fetch_t;
+	')
+	xymon_check(portage_fetch_t)
+	allow portage_fetch_t xymon_tmp_t:file ioctl;
+')
+

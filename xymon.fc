@@ -1,0 +1,19 @@
+/etc/xymon-client.*			system_u:object_r:xymon_etc_t
+/var/run/xymon-client.*			system_u:object_r:xymon_var_run_t
+/var/tmp/xymon-client.*			system_u:object_r:xymon_tmp_t
+/var/log/xymon-client.*			system_u:object_r:xymon_log_t
+
+/opt/checks/.*bash			system_u:object_r:xymon_check_exec_t
+#/opt/montjoie/bin/lance_cron		system_u:object_r:xymon_check_exec_t
+#/opt/montjoie/bin/lance_cron		gen_context(system_u:object_r:unconfined_exec_t,s0)
+/usr/xymon/client/runclient.sh		system_u:object_r:xymon_exec_t
+/usr/xymon/client/bin.*			gen_context(system_u:object_r:bin_t,s0)
+
+/usr/xymon/home(/.*)?			gen_context(system_u:object_r:xymon_tmp_t,s0)
+
+/opt/checks/check_gentoo.bash		gen_context(system_u:object_r:xymon_check_exec_t,s0)
+/opt/checks(/.*)?			gen_context(system_u:object_r:xymon_check_exec_t,s0)
+/opt/checks/etc(/.*)?			gen_context(system_u:object_r:xymon_etc_t,s0)
+/opt/checks/lock(/.*)?			gen_context(system_u:object_r:xymon_tmp_t,s0)
+
+/opt/montjoie/status.*		gen_context(system_u:object_r:xymon_tmp_t,s0)
